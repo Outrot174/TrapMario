@@ -30,10 +30,20 @@ class Game {
     this.camera = { x: 0, y: 0 };
 
     this.initLevel();
+    this.bot = new window.GameBot(this);
     this.bindControls();
     this.bindTouchControls();
     this.bindHudButtons();
     this.setupResponsiveCanvas();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('bot') === '1') {
+      setTimeout(() => {
+        this.bot.toggle();
+        const b = document.getElementById('btnBot');
+        if (b) b.classList.add('active');
+      }, 500);
+    }
 
     this.lastTime = performance.now();
     requestAnimationFrame((t) => this.loop(t));
@@ -178,6 +188,16 @@ class Game {
   }
 
   bindHudButtons() {
+    const botBtn = document.getElementById('btnBot');
+    if (botBtn) {
+      botBtn.addEventListener('click', () => {
+        const active = this.bot.toggle();
+        botBtn.classList.toggle('active', active);
+        window.soundEngine.init();
+        window.soundEngine.startBgm();
+      });
+    }
+
     const restartBtn = document.getElementById('btnRestart');
     if (restartBtn) {
       restartBtn.addEventListener('click', () => this.restart());
@@ -204,6 +224,8 @@ class Game {
   }
 
   update(dt) {
+    if (this.bot) this.bot.update(dt);
+
     if (this.state === 'dead') {
       this.player.deathVy += 0.5;
       this.player.y += this.player.deathVy;
@@ -604,6 +626,8 @@ class Game {
       ctx.fillText('ПОБЕДА! КУРС ПРОЙДЕН!', this.virtualWidth / 2, this.virtualHeight / 2);
       ctx.textAlign = 'left';
     }
+
+    if (this.bot) this.bot.render(ctx);
   }
 
   drawNesBlock(ctx, b) {
