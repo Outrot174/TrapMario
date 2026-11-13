@@ -3,51 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TrapMario - Непроходимый Марио</title>
+  <meta name="theme-color" content="#000000">
+  <title>Super Trap Mario - Kaizo Edition</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="gameWrapper">
-    <!-- Top HUD Bar -->
+    <!-- Top HUD Bar: Authentic 1985 NES Style -->
     <header id="hud">
       <div class="hud-item">
         <span class="label">MARIO</span>
-        <span class="value">000000</span>
+        <span class="value" id="hudScore">000000</span>
+      </div>
+      <div class="hud-item">
+        <span class="label">🪙x</span>
+        <span class="value" id="hudCoins">00</span>
       </div>
       <div class="hud-item">
         <span class="label">WORLD</span>
         <span class="value">1-1</span>
       </div>
       <div class="hud-item skull-hud">
-        <span class="label">💀 СМЕРТИ</span>
+        <span class="label">💀 СМЕРТИ:</span>
         <span class="value" id="deathCount">0</span>
       </div>
       <div class="hud-buttons">
+        <button id="btnSound" class="hud-btn" title="Звук">🔊</button>
         <button id="btnRestart" class="hud-btn" title="Перезапуск">↺</button>
+        <button id="btnFullscreen" class="hud-btn" title="Полный экран">⛶</button>
       </div>
     </header>
 
-    <!-- Main Game Canvas -->
+    <!-- Main Game Canvas Container -->
     <div id="canvasContainer">
-      <canvas id="gameCanvas"></canvas>
+      <canvas id="gameCanvas" width="640" height="360"></canvas>
     </div>
 
-    <!-- Mobile Virtual Controls -->
+    <!-- Mobile Virtual Gamepad -->
     <div id="touchControls">
-      <!-- D-Pad Left / Right -->
+      <!-- D-Pad Cluster (Left Hand) -->
       <div class="dpad-cluster">
         <button id="btnLeft" class="touch-btn dpad-btn" aria-label="Влево">◀</button>
         <button id="btnRight" class="touch-btn dpad-btn" aria-label="Вправо">▶</button>
       </div>
 
-      <!-- Action Buttons Run & Jump -->
+      <!-- Action Cluster (Right Hand) -->
       <div class="action-cluster">
-        <button id="btnRun" class="touch-btn action-btn run-btn" aria-label="Бег">⚡ B</button>
-        <button id="btnJump" class="touch-btn action-btn jump-btn" aria-label="Прыжок">▲ A</button>
+        <button id="btnRun" class="touch-btn action-btn run-btn" aria-label="Бег">B</button>
+        <button id="btnJump" class="touch-btn action-btn jump-btn" aria-label="Прыжок">A</button>
       </div>
     </div>
   </div>
 
+  <script src="src/sprites.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/traps.js"></script>
   <script src="src/game.js"></script>

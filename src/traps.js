@@ -1,131 +1,147 @@
-// TrapMario - Stage Traps, Entities & Level Definitions
-// Every trap is completely deterministic: player can learn and conquer with skill!
+// Super Trap Mario - 1985 Kaizo / Syobon Action Level Architecture
+// Fully deterministic: Every trap can be learned and beaten with memory and skill!
 
 const TILE_SIZE = 32;
 
 class LevelData {
   constructor() {
-    this.width = 140 * TILE_SIZE;
-    this.height = 14 * TILE_SIZE;
+    this.width = 155 * TILE_SIZE;
+    this.height = 12 * TILE_SIZE;
 
-    // Static Solid Ground & Platforms
     this.solids = [];
-    
-    // Invisible Blocks {x, y, w, h, revealed: false, content: 'bonk' | 'crush' | 'poison'}
     this.invisibleBlocks = [];
-
-    // Falling / Collapsing Tiles {x, y, w, h, triggered: false, vy: 0}
     this.collapsingTiles = [];
-
-    // Spikes {x, y, w, h, direction: 'up' | 'down'}
     this.spikes = [];
-
-    // Enemies {x, y, vx, vy, type: 'troll_goomba' | 'missile' | 'fake_pipe', state, ...}
     this.enemies = [];
-
-    // Trigger Zones: invisible areas that cause dynamic trap events
     this.triggers = [];
 
-    // Flagpole {x, y, running: false, vx: 0}
-    this.flagpole = { x: 130 * TILE_SIZE, y: 3 * TILE_SIZE, h: 9 * TILE_SIZE, reached: false, runaway: false, vx: 0 };
+    // The iconic troll runaway flagpole
+    this.flagpole = {
+      x: 132 * TILE_SIZE,
+      y: 2 * TILE_SIZE,
+      h: 9 * TILE_SIZE,
+      reached: false,
+      runaway: false,
+      vx: 0
+    };
 
-    this.initLevel1();
+    this.castle = {
+      x: 142 * TILE_SIZE,
+      y: 6 * TILE_SIZE,
+      w: 5 * TILE_SIZE,
+      h: 5 * TILE_SIZE
+    };
+
+    this.initWorld1_1();
   }
 
-  initLevel1() {
-    const H = this.height;
+  initWorld1_1() {
     const TS = TILE_SIZE;
 
-    // Base ground with gaps
-    // Section 1: 0 to 22
-    this.addGround(0, 22, 12);
-    // Gap 1: 22 to 26 (Pit of doom)
-    // Section 2: 26 to 48
-    this.addGround(26, 48, 12);
-    // Gap 2: 48 to 52
-    // Section 3: 52 to 78
-    this.addGround(52, 78, 12);
-    // Gap 3: 78 to 83
-    // Section 4: 83 to 140
-    this.addGround(83, 140, 12);
+    // --- GROUND SECTIONS & PITS ---
+    // Section 1: Start to Pit 1
+    this.addGround(0, 22, 11);
 
-    // Question Blocks & Bricks
-    // First question block at x=7, y=8
-    this.addBlock(7, 8, 'question', { trap: 'poison_shroom' });
-    this.addBlock(8, 8, 'brick', { trap: 'fall_brick' });
-    this.addBlock(9, 8, 'question', { trap: 'coin_bomb' });
-    this.addBlock(10, 8, 'brick', { trap: 'none' });
+    // PIT 1: 22 to 26 (Kaizo Jump Zone)
+    // Section 2: Pit 1 to Pit 2
+    this.addGround(26, 48, 11);
 
-    // TRAP 1: Invisible block right in front of Gap 1! (Mid-air jump denial)
-    // When player jumps from x=21 to x=27, hitting x=23.5, y=9 bonks head down into pit!
+    // PIT 2: 48 to 54
+    // Section 3: Pit 2 to Pit 3
+    this.addGround(54, 82, 11);
+
+    // PIT 3: 82 to 88
+    // Section 4: Pit 3 to Castle
+    this.addGround(88, 155, 11);
+
+    // --- QUESTION BLOCKS & BRICKS (WORLD 1-1 LOOKALIKE) ---
+    // Classic 4 blocks at x=8..11, y=7
+    this.addBlock(8, 7, 'question', { trap: 'troll_shroom' });
+    this.addBlock(9, 7, 'brick', { trap: 'fall_brick' });
+    this.addBlock(10, 7, 'question', { trap: 'bomb_coin' });
+    this.addBlock(11, 7, 'brick', { trap: 'none' });
+
+    // High question block at x=10, y=3
+    this.addBlock(10, 3, 'question', { trap: 'none' });
+
+    // --- TRAP 1: THE ICONIC KAIZO BLOCK (Mid-air Denier) ---
+    // Placed right before Gap 1 at (23, 7.5): jumping across naturally hits Mario's head!
     this.invisibleBlocks.push({
       x: 23 * TS,
-      y: 8.5 * TS,
+      y: 7.5 * TS,
       w: TS,
       h: TS,
       revealed: false,
-      message: 'Заблокировано! :)'
+      message: 'ЛОЛ! ПЕРВЫЙ KAIZO БЛОК!'
     });
 
-    // TRAP 2: Second invisible block directly above Gap 1 for high jumpers
+    // Secondary Kaizo block above for full-speed jumpers at (24.5, 6)
     this.invisibleBlocks.push({
       x: 24.5 * TS,
-      y: 7 * TS,
+      y: 6 * TS,
       w: TS,
       h: TS,
       revealed: false,
-      message: 'Не перепрыгнешь!'
+      message: 'И ЗДЕСЬ БЛОК! :)'
     });
 
-    // Pipe 1 at x=32
-    this.addPipe(32, 10, 2, false);
+    // --- PIPES ---
+    // Pipe 1 at x=31: Normal safe pipe
+    this.addPipe(31, 9, 2, false);
 
-    // TRAP 3: Pipe 2 at x=40: Fake pipe! If Mario stands near or jumps over, a giant piranha bites straight up
-    this.addPipe(40, 9, 3, true);
+    // --- TRAP 2: PIPE 2 EXTENDER (x=38) ---
+    // Jumping over pipe 2: pipe shoots upward 3 tiles to squash Mario in mid-air!
+    this.addPipe(38, 8, 3, true);
 
-    // TRAP 4: Collapsing bridge tiles at x=44 to 47
-    for (let tx = 44; tx <= 47; tx++) {
+    // Pipe 3 at x=45: Safe pipe
+    this.addPipe(45, 7, 4, false);
+
+    // --- TRAP 3: COLLAPSING BRIDGE (x=46..48) ---
+    for (let tx = 46; tx <= 48; tx++) {
       this.collapsingTiles.push({
         x: tx * TS,
-        y: 12 * TS,
+        y: 11 * TS,
         w: TS,
         h: TS,
         triggered: false,
-        timer: 0.12,
+        timer: 0.1,
         vy: 0,
         falling: false
       });
     }
 
-    // High platform over Gap 2 (x=50, y=7)
-    this.addBlock(50, 7, 'brick', { trap: 'none' });
-    // Bait coin on platform 50: if touched, falling ceiling spike!
+    // High platform across Pit 2: x=50, y=6
+    this.addBlock(50, 6, 'brick', { trap: 'none' });
+    this.addBlock(51, 6, 'brick', { trap: 'none' });
+
+    // --- TRAP 4: FALLING CEILING SPIKE (over platform 50) ---
     this.spikes.push({
-      x: 50 * TS + 8,
+      x: 50.5 * TS,
       y: 0,
-      w: 16,
-      h: TS,
+      w: 24,
+      h: 24,
       active: false,
       direction: 'down',
       triggerX: 50 * TS
     });
 
-    // Spring Trap at x=60: jumps Mario right into ceiling spikes
-    this.addSpring(60, 11);
+    // --- TRAP 5: TROLL SPRING (x=62) ---
+    // Spring looks like a nice shortcut over the next pit, but launches Mario into ceiling spikes!
+    this.addSpring(62, 10);
     this.spikes.push({
-      x: 60 * TS - 8,
-      y: 2 * TS,
-      w: 48,
-      h: 16,
+      x: 61 * TS,
+      y: 1 * TS,
+      w: 3 * TS,
+      h: 20,
       active: true,
       direction: 'down'
     });
 
-    // TRAP 5: Troll Goombas
-    // Goomba 1 at x=14: slow, but when jumped on, leaps up!
+    // --- TRAP 6: TROLL ENEMIES ---
+    // Goomba 1 at x=14: Slow, but leaps up to intercept Mario when stomped!
     this.enemies.push({
-      x: 15 * TS,
-      y: 11 * TS,
+      x: 14 * TS,
+      y: 10 * TS,
       w: TS,
       h: TS,
       vx: -1.2,
@@ -135,10 +151,10 @@ class LevelData {
       alive: true
     });
 
-    // Goomba 2 at x=68: Super-speed Dasher!
+    // Goomba 2 at x=70: Ninja Dasher (charges at 5x speed)
     this.enemies.push({
-      x: 72 * TS,
-      y: 11 * TS,
+      x: 74 * TS,
+      y: 10 * TS,
       w: TS,
       h: TS,
       vx: -1.0,
@@ -148,36 +164,60 @@ class LevelData {
       alive: true
     });
 
-    // Staircase before flagpole: x=115 to 125
-    for (let step = 0; step < 8; step++) {
-      for (let sy = 0; sy <= step; sy++) {
-        this.addBlock(115 + step, 11 - sy, 'stair', { trap: step === 4 ? 'vanishing_step' : 'none' });
-      }
-    }
-
-    // Dynamic triggers:
-    // Trigger A: surprise missile from the back when approaching x=90
+    // --- TRAP 7: REAR BULLET BILL MISSILE (trigger at x=92) ---
     this.triggers.push({
-      x: 90 * TS,
+      x: 92 * TS,
       triggered: false,
       action: (game) => {
-        game.enemies.push({
-          x: game.camera.x - 20,
-          y: (game.player.y),
-          w: TS * 1.2,
-          h: TS * 0.8,
-          vx: 6.5,
+        game.level.enemies.push({
+          x: game.camera.x - 32,
+          y: game.player.y - 8,
+          w: TS * 1.3,
+          h: TS * 0.9,
+          vx: 7.2, // Fast surprise missile!
           vy: 0,
-          type: 'rear_missile',
+          type: 'bullet_bill',
           alive: true
         });
         window.soundEngine.trap();
       }
     });
 
-    // Flagpole at x=130
-    this.flagpole.x = 130 * TS;
-    this.flagpole.y = 3 * TS;
+    // --- TRAP 8: KAIZO STAIRCASE (x=115..124) ---
+    // Step 4 collapses, and Step 7 has an invisible block right above!
+    for (let step = 0; step < 8; step++) {
+      for (let sy = 0; sy <= step; sy++) {
+        if (step === 4 && sy === step) {
+          // Phantom collapsing step!
+          this.collapsingTiles.push({
+            x: (115 + step) * TS,
+            y: (10 - sy) * TS,
+            w: TS,
+            h: TS,
+            triggered: false,
+            timer: 0.08,
+            vy: 0,
+            falling: false
+          });
+        } else {
+          this.addBlock(115 + step, 10 - sy, 'stair');
+        }
+      }
+    }
+
+    // Invisible block right at the top of the stairs (122, 2)
+    this.invisibleBlocks.push({
+      x: 122 * TS,
+      y: 2 * TS,
+      w: TS,
+      h: TS,
+      revealed: false,
+      message: 'УПС! ВЕРШИНА ЗАКРЫТА!'
+    });
+
+    // --- TRAP 9: RUNAWAY FLAGPOLE (x=132) ---
+    this.flagpole.x = 132 * TS;
+    this.flagpole.y = 2 * TS;
   }
 
   addGround(startTile, endTile, rowTile) {
@@ -214,6 +254,8 @@ class LevelData {
       h: heightTiles * TS,
       type: 'pipe',
       isTroll: isTroll,
+      origY: tileY * TS,
+      origH: heightTiles * TS,
       trollFired: false
     });
   }
@@ -225,8 +267,7 @@ class LevelData {
       y: tileY * TS + 16,
       w: TS,
       h: 16,
-      type: 'spring',
-      compressed: false
+      type: 'spring'
     });
   }
 }
