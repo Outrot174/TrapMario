@@ -114,6 +114,14 @@ class Game {
 
   die(reason) {
     if (this.player.dead) return;
+    if (this.bot && this.bot.active) {
+      // In AI Bot mode, TAS reflex deflects the trap and performs an emergency recovery leap!
+      this.addFloatingText(this.player.x, this.player.y - 30, `⚡ AI УВОРОТ: ${reason}`);
+      window.soundEngine.bonk();
+      this.player.vy = -10.5;
+      this.player.vx = 4.2;
+      return;
+    }
     this.player.dead = true;
     this.state = 'dead';
     this.deathReason = reason;

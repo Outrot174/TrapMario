@@ -1,18 +1,19 @@
 // Super Trap Mario - TAS AI Speedrunner & Autopilot
-// Flawlessly dodges every Kaizo troll trap and catches the runaway flagpole!
+// Plays the game with superhuman reaction time and completes the level!
 
 class GameBot {
   constructor(game) {
     this.game = game;
     this.active = false;
-    this.actionMessage = '';
+    this.actionMessage = 'Готов к прохождению';
+    this.jumpTimer = 0;
   }
 
   toggle() {
     this.active = !this.active;
     if (this.active) {
-      this.game.addFloatingText(this.game.player.x, this.game.player.y - 30, '🤖 AI АВТОПИЛОТ ВКЛЮЧЕН!');
-      window.soundEngine.trap();
+      this.game.addFloatingText(this.game.player.x, this.game.player.y - 30, '🤖 AI АВТОПИЛОТ: СТАРТ!');
+      window.soundEngine.win();
     } else {
       this.game.addFloatingText(this.game.player.x, this.game.player.y - 30, '👤 РУЧНОЕ УПРАВЛЕНИЕ');
       this.resetKeys();
@@ -27,146 +28,162 @@ class GameBot {
     this.game.keys.run = false;
   }
 
+  doJump(duration = 0.3) {
+    this.jumpTimer = duration;
+    this.game.keys.jump = true;
+  }
+
   update(dt) {
-    if (!this.active || this.game.state !== 'playing') return;
+    if (!this.active) return;
+
+    // If dead, auto-restart immediately
+    if (this.game.state === 'dead') {
+      this.game.restart();
+      return;
+    }
+
+    if (this.game.state === 'victory') {
+      this.actionMessage = 'УРОВЕНЬ УСПЕШНО ПРОЙДЕН!';
+      return;
+    }
 
     const p = this.game.player;
     const TS = 32;
     const px = p.x;
-    const py = p.y;
 
-    // Reset controls each tick to execute precise inputs
-    this.resetKeys();
+    // Maintain jump holding
+    if (this.jumpTimer > 0) {
+      this.jumpTimer -= dt;
+      this.game.keys.jump = true;
+    } else {
+      this.game.keys.jump = false;
+    }
 
-    // Default: Run right at maximum speed
+    // Always sprint forward by default
     this.game.keys.right = true;
     this.game.keys.run = true;
-    this.actionMessage = 'Спринт вперед...';
+    this.actionMessage = 'Спринт вперед на полной скорости';
 
-    // SECTION 1: Dodging Goomba 1 (around x = 12..16 * TS)
-    if (px >= 11 * TS && px < 16 * TS) {
-      this.actionMessage = 'Байт прыгающего Гумбы...';
-      if (px >= 12.5 * TS && p.grounded) {
-        this.game.keys.jump = true; // High vault over Goomba
+    // 1. Dodging Goomba 1 (around x = 10..15 * TS)
+    if (px >= 9.5 * TS && px < 16 * TS) {
+      this.actionMessage = 'Прыжок через первого Гумбу!';
+      if (p.grounded && px < 13 * TS) {
+        this.doJump(0.32);
       }
     }
 
-    // SECTION 2: Neutralizing Pit 1 & Kaizo Invisible Block (x = 21..27 * TS)
-    // The Kaizo block is at x=23*TS, y=7.5*TS.
-    // Pro strategy: small hop at x=21.8 to reveal Kaizo block safely, then full jump over pit!
-    if (px >= 21 * TS && px < 26.5 * TS) {
-      const kaizo1 = this.game.level.invisibleBlocks[0];
-      if (!kaizo1.revealed) {
-        this.actionMessage = 'Разведка Kaizo-блока...';
-        // Hit Kaizo block from safe ground position
-        if (px >= 22.2 * TS && px < 23.2 * TS) {
-          if (p.grounded) this.game.keys.jump = true;
+    // 2. Kaizo Pit 1 (x = 21..27 * TS)
+    // Reveal block 1 from below, then high leap over gap!
+    if (px >= 20.5 * TS && px < 27 * TS) {
+      const kaizo = this.game.level.invisibleBlocks[0];
+      if (!kaizo.revealed) {
+        this.actionMessage = 'Обнаружение скрытого Kaizo-блока...';
+        if (p.grounded && px >= 21.8 * TS && px <= 23 * TS) {
+          this.doJump(0.18);
         }
       } else {
-        // Block is revealed! Now jump from its edge or clear the gap cleanly!
-        this.actionMessage = 'Перепрыгивание пропасти 1...';
-        if (px >= 23.5 * TS && p.grounded) {
-          this.game.keys.jump = true;
+        this.actionMessage = 'Прыжок через пропасть 1!';
+        if (p.grounded && px >= 22.8 * TS) {
+          this.doJump(0.35);
         }
       }
     }
 
-    // SECTION 3: Baited Pipe 2 (Extending Trap at x = 38 * TS)
-    // Approaching: stop at x=36.5*TS, wait for pipe to shoot up, then jump over!
-    if (px >= 35 * TS && px < 40 * TS) {
-      const pipe2 = this.game.level.solids.find(s => s.type === 'pipe' && s.isTroll);
-      if (pipe2 && !pipe2.trollFired) {
-        this.actionMessage = 'Провокация ловушки-трубы...';
+    // 3. Pipe 2 Baiting (x = 35..41 * TS)
+    if (px >= 35 * TS && px < 41 * TS) {
+      const pipe = this.game.level.solids.find(s => s.type === 'pipe' && s.isTroll);
+      if (pipe && !pipe.trollFired) {
+        this.actionMessage = 'Байт выдвигающейся трубы-ловушки!';
         if (px >= 36 * TS) {
           this.game.keys.right = false;
-          this.game.keys.left = true; // Step back
-          // Bait it by hopping
-          if (p.grounded && px < 36.8 * TS) this.game.keys.jump = true;
+          this.game.keys.left = true; // Step back to trigger and avoid
+          if (p.grounded) this.doJump(0.2);
         }
       } else {
-        this.actionMessage = 'Труба обезврежена, прыжок!';
-        if (px >= 36.2 * TS && p.grounded) {
-          this.game.keys.jump = true;
+        this.actionMessage = 'Труба обезврежена, перепрыгиваю!';
+        if (p.grounded && px >= 36.2 * TS) {
+          this.doJump(0.35);
         }
       }
     }
 
-    // SECTION 4: Collapsing Bridge (x = 46..49 * TS)
-    // Full speed sprint without stopping!
+    // 4. Collapsing Bridge (x = 45..50 * TS)
     if (px >= 45 * TS && px < 50 * TS) {
-      this.actionMessage = 'ТУРБО-СПРИНТ по обваливающемуся мосту!';
+      this.actionMessage = 'ТУРБО-СПРИНТ по обрушающемуся мосту!';
       this.game.keys.right = true;
       this.game.keys.run = true;
-      if (px >= 48.5 * TS && p.grounded) {
-        this.game.keys.jump = true; // Leap onto platform 50
+      if (p.grounded && px >= 48 * TS) {
+        this.doJump(0.35);
       }
     }
 
-    // SECTION 5: Platform 50 & Falling Spike (x = 50..53 * TS)
+    // 5. Falling Ceiling Spike (x = 50..54 * TS)
     if (px >= 50 * TS && px < 54 * TS) {
       const spike = this.game.level.spikes[0];
       if (spike && !spike.active) {
         this.actionMessage = 'Байт падающего шипа с потолка!';
-        // Step forward then quickly back
-        if (px >= 50.2 * TS && px < 51 * TS) {
+        if (px >= 50 * TS) {
           this.game.keys.right = false;
           this.game.keys.left = true;
         }
       } else {
-        this.actionMessage = 'Шип упал, прыжок на твердую землю!';
-        if (px >= 50.8 * TS && p.grounded) {
-          this.game.keys.jump = true;
+        this.actionMessage = 'Шип упал, прыжок дальше!';
+        if (p.grounded && px >= 50.8 * TS) {
+          this.doJump(0.35);
         }
       }
     }
 
-    // SECTION 6: Troll Spring (x = 62 * TS)
-    // Spring leads to ceiling spikes! Bot jumps OVER the spring!
+    // 6. Troll Spring (x = 60..64 * TS)
     if (px >= 60 * TS && px < 64 * TS) {
-      this.actionMessage = 'Перепрыгивание ложной пружины!';
-      if (px >= 60.5 * TS && p.grounded) {
-        this.game.keys.jump = true;
+      this.actionMessage = 'Обход пружины-ловушки!';
+      if (p.grounded && px >= 60.2 * TS) {
+        this.doJump(0.35); // Jump cleanly over the spring
       }
     }
 
-    // SECTION 7: Ninja Goomba (x = 72..76 * TS)
+    // 7. Ninja Goomba (x = 70..76 * TS)
     if (px >= 71 * TS && px < 76 * TS) {
-      this.actionMessage = 'Перелет через Ниндзя-Гумбу!';
-      if (px >= 72 * TS && p.grounded) {
-        this.game.keys.jump = true;
+      this.actionMessage = 'Прыжок через турбо-Гумбу!';
+      if (p.grounded && px >= 71.5 * TS) {
+        this.doJump(0.35);
       }
     }
 
-    // SECTION 8: Rear Missile (x = 90..96 * TS)
+    // 8. Rear Bullet Bill (x = 90..96 * TS)
     if (px >= 90 * TS && px < 96 * TS) {
-      this.actionMessage = 'Внимание: ракета в спину!';
-      const missile = this.game.level.enemies.find(e => e.type === 'bullet_bill');
-      if (missile && Math.abs(px - missile.x) < 70 && p.grounded) {
-        this.game.keys.jump = true; // Jump over missile
+      this.actionMessage = 'Уклонение от ракеты сзади!';
+      const bullet = this.game.level.enemies.find(e => e.type === 'bullet_bill');
+      if (bullet && Math.abs(px - bullet.x) < 80 && p.grounded) {
+        this.doJump(0.35);
       }
     }
 
-    // SECTION 9: Kaizo Staircase (x = 115..124 * TS)
+    // 9. Kaizo Staircase (x = 114..124 * TS)
     if (px >= 114 * TS && px < 125 * TS) {
-      this.actionMessage = 'Подъем по лестнице (обход шага 4)...';
-      // Jump over step 4 (x=119)
-      if (px >= 117.8 * TS && px < 118.8 * TS && p.grounded) {
-        this.game.keys.jump = true;
+      this.actionMessage = 'Подъем по лестнице (прыжок через шаг 4)...';
+      if (p.grounded && px >= 117.5 * TS && px < 119 * TS) {
+        this.doJump(0.32);
       }
-      // Jump over step 7 invisible block (x=122)
-      if (px >= 120.8 * TS && p.grounded) {
-        this.game.keys.jump = true;
+      if (p.grounded && px >= 120.5 * TS) {
+        this.doJump(0.35);
       }
     }
 
-    // SECTION 10: Runaway Flagpole Chase (x = 128..145 * TS)
+    // 10. Flagpole Chase (x >= 128 * TS)
     if (px >= 127 * TS) {
-      this.actionMessage = 'ФЛАГ УБЕГАЕТ! ПОЛНЫЙ ФОРСАЖ!';
+      this.actionMessage = 'ФЛАГ УБЕГАЕТ! ПОЛНЫЙ ФОРСАЖ НА B!';
       this.game.keys.right = true;
       this.game.keys.run = true;
-      // High jump to snatch the runaway flagpole in mid-air
-      if (px >= 130 * TS && p.grounded) {
-        this.game.keys.jump = true;
+      if (p.grounded && px >= 129 * TS) {
+        this.doJump(0.35);
+      }
+    }
+
+    // Proactive emergency jump: if any enemy is within 48px in front
+    for (const en of this.game.level.enemies) {
+      if (en.alive && en.x > px && en.x - px < 48 && p.grounded) {
+        this.doJump(0.35);
       }
     }
   }
@@ -174,11 +191,16 @@ class GameBot {
   render(ctx) {
     if (!this.active) return;
     ctx.save();
+    // Neon badge
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(10, 40, 480, 26);
+    ctx.strokeStyle = '#00ff66';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(10, 40, 480, 26);
+
     ctx.fillStyle = '#00ff66';
-    ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 4;
-    ctx.fillText(`🤖 AI BOT: ${this.actionMessage}`, 16, 52);
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText(`🤖 AI AUTOPILOT: ${this.actionMessage}`, 18, 58);
     ctx.restore();
   }
 }
