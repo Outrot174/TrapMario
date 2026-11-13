@@ -28,9 +28,12 @@ class GameBot {
     this.game.keys.run = false;
   }
 
-  doJump(duration = 0.3) {
+  doJump(duration = 0.35, customVy = null) {
     this.jumpTimer = duration;
     this.game.keys.jump = true;
+    if (customVy !== null && this.game.player.grounded) {
+      this.game.player.vy = customVy;
+    }
   }
 
   update(dt) {
@@ -43,7 +46,10 @@ class GameBot {
     }
 
     if (this.game.state === 'victory') {
-      this.actionMessage = 'УРОВЕНЬ УСПЕШНО ПРОЙДЕН!';
+      this.actionMessage = 'УРОВЕНЬ УСПЕШНО ПРОЙДЕН! 👑';
+      this.game.keys.right = false;
+      this.game.keys.run = false;
+      this.game.keys.jump = false;
       return;
     }
 
@@ -59,123 +65,119 @@ class GameBot {
       this.game.keys.jump = false;
     }
 
-    // Always sprint forward by default
+    // Default: turbo sprint forward
+    this.game.keys.left = false;
     this.game.keys.right = true;
     this.game.keys.run = true;
-    this.actionMessage = 'Спринт вперед на полной скорости';
+    this.actionMessage = 'Турбо-спринт вперед на полной скорости';
 
-    // 1. Dodging Goomba 1 (around x = 10..15 * TS)
-    if (px >= 9.5 * TS && px < 16 * TS) {
+    // 1. Goomba 1 (x=16 * TS): Jump after blocks at x=12.5 * TS into clear sky
+    if (px >= 12.0 * TS && px < 16.0 * TS) {
       this.actionMessage = 'Прыжок через первого Гумбу!';
-      if (p.grounded && px < 13 * TS) {
-        this.doJump(0.32);
+      if (p.grounded && px >= 12.2 * TS && px < 13.8 * TS) {
+        this.doJump(0.35);
       }
     }
 
-    // 2. Kaizo Pit 1 (x = 21..27 * TS)
-    // Reveal block 1 from below, then high leap over gap!
-    if (px >= 20.5 * TS && px < 27 * TS) {
-      const kaizo = this.game.level.invisibleBlocks[0];
-      if (!kaizo.revealed) {
-        this.actionMessage = 'Обнаружение скрытого Kaizo-блока...';
-        if (p.grounded && px >= 21.8 * TS && px <= 23 * TS) {
-          this.doJump(0.18);
-        }
-      } else {
-        this.actionMessage = 'Прыжок через пропасть 1!';
-        if (p.grounded && px >= 22.8 * TS) {
-          this.doJump(0.35);
-        }
+    // 2. Kaizo Pit 1 (x=21..27 * TS): Low sprint hop under ceiling Kaizo block!
+    else if (px >= 20.5 * TS && px < 27.0 * TS) {
+      this.actionMessage = 'Низкий Kaizo-прыжок под потолочным блоком!';
+      if (p.grounded && px >= 21.0 * TS && px < 22.0 * TS) {
+        this.doJump(0.18, -8.2);
       }
     }
 
-    // 3. Pipe 2 Baiting (x = 35..41 * TS)
-    if (px >= 35 * TS && px < 41 * TS) {
+    // 3. Pipe 1 (x=31 * TS): Jump over 2-tile pipe
+    else if (px >= 28.5 * TS && px < 33.0 * TS) {
+      this.actionMessage = 'Перепрыгиваем трубу 1!';
+      if (p.grounded && px < 30.5 * TS) {
+        this.doJump(0.35);
+      }
+    }
+
+    // 4. Pipe 2 Baiting (x=38 * TS): Bait extender pipe, step back, then leap
+    else if (px >= 34.5 * TS && px < 41.0 * TS) {
       const pipe = this.game.level.solids.find(s => s.type === 'pipe' && s.isTroll);
-      if (pipe && !pipe.trollFired) {
-        this.actionMessage = 'Байт выдвигающейся трубы-ловушки!';
-        if (px >= 36 * TS) {
-          this.game.keys.right = false;
-          this.game.keys.left = true; // Step back to trigger and avoid
-          if (p.grounded) this.doJump(0.2);
-        }
+      if (pipe && pipe.extended) {
+        this.actionMessage = 'Байт трубы-ловушки: шаг назад!';
+        this.game.keys.right = false;
+        this.game.keys.left = true;
       } else {
-        this.actionMessage = 'Труба обезврежена, перепрыгиваю!';
-        if (p.grounded && px >= 36.2 * TS) {
+        this.actionMessage = 'Труба готова, перепрыгиваю!';
+        if (p.grounded && px >= 35.8 * TS && px < 37.5 * TS) {
           this.doJump(0.35);
         }
       }
     }
 
-    // 4. Collapsing Bridge (x = 45..50 * TS)
-    if (px >= 45 * TS && px < 50 * TS) {
-      this.actionMessage = 'ТУРБО-СПРИНТ по обрушающемуся мосту!';
-      this.game.keys.right = true;
-      this.game.keys.run = true;
-      if (p.grounded && px >= 48 * TS) {
+    // 5. Pipe 3 (x=45 * TS): Full sprint jump over 3-tile pipe
+    else if (px >= 42.0 * TS && px < 46.5 * TS) {
+      this.actionMessage = 'Прыжок через трубу 3!';
+      if (p.grounded && px < 44.5 * TS) {
         this.doJump(0.35);
       }
     }
 
-    // 5. Falling Ceiling Spike (x = 50..54 * TS)
-    if (px >= 50 * TS && px < 54 * TS) {
-      const spike = this.game.level.spikes[0];
-      if (spike && !spike.active) {
-        this.actionMessage = 'Байт падающего шипа с потолка!';
-        if (px >= 50 * TS) {
-          this.game.keys.right = false;
-          this.game.keys.left = true;
-        }
-      } else {
-        this.actionMessage = 'Шип упал, прыжок дальше!';
-        if (p.grounded && px >= 50.8 * TS) {
-          this.doJump(0.35);
-        }
-      }
-    }
-
-    // 6. Troll Spring (x = 60..64 * TS)
-    if (px >= 60 * TS && px < 64 * TS) {
-      this.actionMessage = 'Обход пружины-ловушки!';
-      if (p.grounded && px >= 60.2 * TS) {
-        this.doJump(0.35); // Jump cleanly over the spring
-      }
-    }
-
-    // 7. Ninja Goomba (x = 70..76 * TS)
-    if (px >= 71 * TS && px < 76 * TS) {
-      this.actionMessage = 'Прыжок через турбо-Гумбу!';
-      if (p.grounded && px >= 71.5 * TS) {
+    // 6. Collapsing bridge & Platform 50 (x=46..54 * TS): Turbo leap to evade ceiling spike!
+    else if (px >= 46.2 * TS && px < 54.0 * TS) {
+      this.actionMessage = 'Турбо-прыжок на платформу 50 и далее!';
+      if (p.grounded && px < 48.0 * TS) {
+        this.doJump(0.35);
+      } else if (p.grounded && px >= 49.5 * TS && px <= 51.5 * TS) {
         this.doJump(0.35);
       }
     }
 
-    // 8. Rear Bullet Bill (x = 90..96 * TS)
-    if (px >= 90 * TS && px < 96 * TS) {
+    // 7. Troll Spring (x=62 * TS): Leap cleanly over spring into ceiling spikes
+    else if (px >= 58.5 * TS && px < 64.0 * TS) {
+      this.actionMessage = 'Прыжок через пружину-ловушку!';
+      if (p.grounded && px < 61.0 * TS) {
+        this.doJump(0.35);
+      }
+    }
+
+    // 8. Ninja Goomba (x=74 * TS): Jump over dashing high-speed Goomba
+    else if (px >= 69.0 * TS && px < 76.0 * TS) {
+      this.actionMessage = 'Прыжок над турбо-Гумбой!';
+      if (p.grounded && px < 72.0 * TS) {
+        this.doJump(0.35);
+      }
+    }
+
+    // 9. Pit 3 (x=82..88 * TS): 6-tile sprint leap
+    else if (px >= 80.0 * TS && px < 88.0 * TS) {
+      this.actionMessage = 'Прыжок через пропасть 3!';
+      if (p.grounded && px < 82.0 * TS) {
+        this.doJump(0.35);
+      }
+    }
+
+    // 10. Rear Bullet Bill (trigger at x=92 * TS): Jump over missile from behind
+    else if (px >= 92.0 * TS && px < 96.0 * TS) {
       this.actionMessage = 'Уклонение от ракеты сзади!';
-      const bullet = this.game.level.enemies.find(e => e.type === 'bullet_bill');
-      if (bullet && Math.abs(px - bullet.x) < 80 && p.grounded) {
+      if (p.grounded && px < 94.0 * TS) {
         this.doJump(0.35);
       }
     }
 
-    // 9. Kaizo Staircase (x = 114..124 * TS)
-    if (px >= 114 * TS && px < 125 * TS) {
-      this.actionMessage = 'Подъем по лестнице (прыжок через шаг 4)...';
-      if (p.grounded && px >= 117.5 * TS && px < 119 * TS) {
-        this.doJump(0.32);
-      }
-      if (p.grounded && px >= 120.5 * TS) {
-        this.doJump(0.35);
+    // 11. Kaizo Staircase (x=115..125 * TS): Hop up, clear step 4 & step 7
+    else if (px >= 114.0 * TS && px < 125.0 * TS) {
+      this.actionMessage = 'Подъем по коварной лестнице!';
+      if (p.grounded) {
+        if (px >= 117.5 * TS && px < 119.5 * TS) {
+          this.doJump(0.35); // Leap over collapsing step 4
+        } else if (px >= 120.8 * TS && px < 122.5 * TS) {
+          this.doJump(0.35); // Leap over step 7
+        } else {
+          this.doJump(0.20); // Normal hop up step
+        }
       }
     }
 
-    // 10. Flagpole Chase (x >= 128 * TS)
-    if (px >= 127 * TS) {
-      this.actionMessage = 'ФЛАГ УБЕГАЕТ! ПОЛНЫЙ ФОРСАЖ НА B!';
-      this.game.keys.right = true;
-      this.game.keys.run = true;
-      if (p.grounded && px >= 129 * TS) {
+    // 12. Runaway Flagpole (x >= 126 * TS): Maximum sprint chase and leap!
+    else if (px >= 126.0 * TS) {
+      this.actionMessage = 'ПОЛНЫЙ ФОРСАЖ: ЛОВИМ ФЛАГ!';
+      if (p.grounded && px >= 132.5 * TS) {
         this.doJump(0.35);
       }
     }

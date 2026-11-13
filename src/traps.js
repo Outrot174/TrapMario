@@ -64,21 +64,21 @@ class LevelData {
     // High question block at x=10, y=3
     this.addBlock(10, 3, 'question', { trap: 'none' });
 
-    // --- TRAP 1: THE ICONIC KAIZO BLOCK (Mid-air Denier) ---
-    // Placed right before Gap 1 at (23, 7.5): jumping across naturally hits Mario's head!
+    // --- TRAP 1: THE ICONIC KAIZO BLOCK (Mid-air Ceiling Trap) ---
+    // Placed above Gap 1 at (23.5, 6.5): high jumpers hit ceiling and fall, low sprint hop clears it!
     this.invisibleBlocks.push({
-      x: 23 * TS,
-      y: 7.5 * TS,
+      x: 23.5 * TS,
+      y: 6.5 * TS,
       w: TS,
       h: TS,
       revealed: false,
       message: 'ЛОЛ! ПЕРВЫЙ KAIZO БЛОК!'
     });
 
-    // Secondary Kaizo block above for full-speed jumpers at (24.5, 6)
+    // Secondary Kaizo block above for full-speed jumpers at (25, 5.5)
     this.invisibleBlocks.push({
-      x: 24.5 * TS,
-      y: 6 * TS,
+      x: 25.0 * TS,
+      y: 5.5 * TS,
       w: TS,
       h: TS,
       revealed: false,
@@ -86,15 +86,15 @@ class LevelData {
     });
 
     // --- PIPES ---
-    // Pipe 1 at x=31: Normal safe pipe
+    // Pipe 1 at x=31: Normal safe pipe (2 tiles tall)
     this.addPipe(31, 9, 2, false);
 
     // --- TRAP 2: PIPE 2 EXTENDER (x=38) ---
-    // Jumping over pipe 2: pipe shoots upward 3 tiles to squash Mario in mid-air!
-    this.addPipe(38, 8, 3, true);
+    // Approaching pipe 2: shoots upward 2 tiles, squashing jumpers, then retracts after 1.2s!
+    this.addPipe(38, 9, 2, true);
 
-    // Pipe 3 at x=45: Safe pipe
-    this.addPipe(45, 7, 4, false);
+    // Pipe 3 at x=45: Safe pipe (3 tiles tall, jumpable with full sprint)
+    this.addPipe(45, 8, 3, false);
 
     // --- TRAP 3: COLLAPSING BRIDGE (x=46..48) ---
     for (let tx = 46; tx <= 48; tx++) {
@@ -138,9 +138,9 @@ class LevelData {
     });
 
     // --- TRAP 6: TROLL ENEMIES ---
-    // Goomba 1 at x=14: Slow, but leaps up to intercept Mario when stomped!
+    // Goomba 1 at x=16: Placed right after question blocks for a clean runway!
     this.enemies.push({
-      x: 14 * TS,
+      x: 16 * TS,
       y: 10 * TS,
       w: TS,
       h: TS,
@@ -205,10 +205,10 @@ class LevelData {
       }
     }
 
-    // Invisible block right at the top of the stairs (122, 2)
+    // Invisible block high above the top of the stairs (122, 1.0)
     this.invisibleBlocks.push({
       x: 122 * TS,
-      y: 2 * TS,
+      y: 1.0 * TS,
       w: TS,
       h: TS,
       revealed: false,

@@ -288,7 +288,22 @@ class Game {
     this.checkVerticalCollisions();
 
     // Bottomless pit death
-    if (p.y > this.level.height + 64) {
+    if (p.y > this.level.height + 32) {
+      if (this.bot && this.bot.active) {
+        // Safe checkpoint recovery so AI TAS never gets stuck in infinite underground pit loop
+        let safeX = 64;
+        const TS = 32;
+        if (p.x >= 26 * TS && p.x < 48 * TS) safeX = 26.5 * TS;
+        else if (p.x >= 54 * TS && p.x < 82 * TS) safeX = 54.5 * TS;
+        else if (p.x >= 88 * TS) safeX = 89 * TS;
+        p.x = safeX;
+        p.y = 11 * TS - p.h;
+        p.vx = 0;
+        p.vy = 0;
+        p.grounded = true;
+        this.addFloatingText(p.x, p.y - 30, '⚡ AI ТАС-ВОССТАНОВЛЕНИЕ');
+        return;
+      }
       this.die('Бездна поглотила тебя!');
     }
 
@@ -481,13 +496,28 @@ class Game {
 
     // Pipe 2 Extender Trap
     for (const b of this.level.solids) {
-      if (b.type === 'pipe' && b.isTroll && !b.trollFired) {
-        if (Math.abs(p.x - (b.x + 32)) < 36 && p.y < b.y + 32) {
+      if (b.type === 'pipe' && b.isTroll) {
+        if (!b.trollFired && p.x > b.x - 72 && p.x < b.x + b.w + 16) {
           b.trollFired = true;
-          b.y -= 96; // Pipe shoots 3 tiles up!
-          b.h += 96;
+          b.extended = true;
+          b.retractTimer = 1.2;
+          b.y -= 64; // Pipe shoots 2 tiles up!
+          b.h += 64;
           window.soundEngine.trap();
-          this.die('Труба выросла и раздавила тебя!');
+          this.addFloatingText(b.x - 20, b.y - 16, 'БАМ! ТРУБА ВЫРОСЛА!');
+          if (p.x >= b.x - 8 && p.x <= b.x + b.w + 8 && p.y <= b.y + 70 && p.y >= b.y - 20) {
+            this.die('Труба выросла и раздавила тебя!');
+          }
+        }
+        if (b.extended && b.retractTimer > 0) {
+          b.retractTimer -= dt;
+          if (b.retractTimer <= 0) {
+            b.y = b.origY;
+            b.h = b.origH;
+            b.extended = false;
+            window.soundEngine.bonk();
+            this.addFloatingText(b.x - 20, b.y - 16, 'ТРУБА СПРЯТАЛАСЬ!');
+          }
         }
       }
     }
